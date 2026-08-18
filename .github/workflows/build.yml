@@ -1,4 +1,4 @@
-name: Build VST3 + AAX
+nname: Build VST3 + AAX
 
 on:
   workflow_dispatch:
@@ -24,27 +24,24 @@ jobs:
           unzip -q "$RUNNER_TEMP/aax-sdk.zip" \
             -d "$RUNNER_TEMP/aax-sdk"
 
-          echo "=== AAX SDK ==="
-          find "$RUNNER_TEMP/aax-sdk" -maxdepth 3 -type d -print
+          echo "AAX SDK:"
+          find "$RUNNER_TEMP/aax-sdk" -maxdepth 2 -type d | sort
 
-      - name: Locate AAX SDK
+      - name: Set AAX SDK path
         run: |
-          SDK_ROOT=$(find "$RUNNER_TEMP/aax-sdk" \
-            -type d \
-            -name "AAX_SDK" \
-            -print -quit)
+          SDK_PATH="$RUNNER_TEMP/aax-sdk/aax-sdk-2-9-0"
 
-          if [ -z "$SDK_ROOT" ]; then
-            echo "AAX_SDK directory not found."
-            echo "Searching extracted SDK:"
-            find "$RUNNER_TEMP/aax-sdk" -maxdepth 5 -print
+          if [ ! -d "$SDK_PATH" ]; then
+            echo "Expected SDK path not found:"
+            echo "$SDK_PATH"
+            find "$RUNNER_TEMP/aax-sdk" -maxdepth 3 -print
             exit 1
           fi
 
-          echo "AAX SDK found:"
-          echo "$SDK_ROOT"
+          echo "AAX_SDK_PATH=$SDK_PATH" >> "$GITHUB_ENV"
 
-          echo "AAX_SDK_PATH=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "Using AAX SDK:"
+          echo "$SDK_PATH"
 
       - name: Configure
         run: |
@@ -65,15 +62,15 @@ jobs:
             --config Release \
             --target FrequencyIsolator_AAX
 
-      - name: Find built plugins
+      - name: Locate plugins
         run: |
-          echo "=== VST3 ==="
+          echo "===== VST3 ====="
           find build -type d -name "*.vst3" -print
 
-          echo "=== AAX ==="
+          echo "===== AAX ====="
           find build -type d -name "*.aaxplugin" -print
 
-      - name: Package
+      - name: Package plugins
         run: |
           rm -rf package
           mkdir -p package
@@ -88,26 +85,22 @@ jobs:
             -name "Frequency Isolator.aaxplugin" \
             -print -quit)
 
-          if [ -z "$VST3" ]; then
-            echo "VST3 was not built."
-            exit 1
-          fi
+          echo "VST3: $VST3"
+          echo "AAX:  $AAX"
 
-          if [ -z "$AAX" ]; then
-            echo "AAX was not built."
-            exit 1
-          fi
+          test -n "$VST3"
+          test -n "$AAX"
 
           cp -R "$VST3" package/
           cp -R "$AAX" package/
-
-          echo "=== FINAL PACKAGE ==="
-          find package -maxdepth 3 -print
 
           ditto -c -k \
             --keepParent \
             package \
             FrequencyIsolator-macOS.zip
+
+          echo "===== PACKAGE ====="
+          unzip -l FrequencyIsolator-macOS.zip
 
       - name: Upload plugins
         uses: actions/upload-artifact@v4
