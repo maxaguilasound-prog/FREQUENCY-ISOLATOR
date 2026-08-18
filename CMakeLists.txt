@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
+
 project(FrequencyIsolator VERSION 1.0.0 LANGUAGES C CXX)
+
+if(DEFINED ENV{AAX_SDK_PATH})
+    set(AAX_SDK_PATH "$ENV{AAX_SDK_PATH}" CACHE PATH "Path to AAX SDK")
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
