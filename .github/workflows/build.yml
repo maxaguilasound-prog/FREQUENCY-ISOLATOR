@@ -1,4 +1,4 @@
-nname: Build VST3 + AAX
+name: Build VST3 + AAX
 
 on:
   workflow_dispatch:
