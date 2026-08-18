@@ -11,8 +11,7 @@ FrequencyIsolatorAudioProcessor::FrequencyIsolatorAudioProcessor()
 juce::AudioProcessorValueTreeState::ParameterLayout FrequencyIsolatorAudioProcessor::createParameterLayout()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> p;
-    p.push_back(std::make_unique<juce::AudioParameterChoice>(
-        "band", "Band",
+    p.push_back(std::make_unique<juce::AudioParameterChoice>("band", "Band",
         juce::StringArray{"31.5 Hz", "63 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"}, 5));
     p.push_back(std::make_unique<juce::AudioParameterBool>("bypass", "Bypass", false));
     p.push_back(std::make_unique<juce::AudioParameterFloat>("output", "Output", juce::NormalisableRange<float>(-24.f, 12.f, .01f), 0.f));
@@ -22,7 +21,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout FrequencyIsolatorAudioProces
 void FrequencyIsolatorAudioProcessor::prepareToPlay(double sr, int bs)
 {
     filter.prepare(sr, bs, getTotalNumOutputChannels());
-    const int i = juce::jlimit(0, 9, static_cast<int>(*apvts.getRawParameterValue("band")));
+    const int i = juce::jlimit(0, 9, static_cast<int>(apvts.getRawParameterValue("band")->load()));
     filter.setCentreFrequency(centres[i]);
     setLatencySamples(filter.getLatencySamples());
 }
@@ -39,15 +38,15 @@ bool FrequencyIsolatorAudioProcessor::isBusesLayoutSupported(const BusesLayout& 
 void FrequencyIsolatorAudioProcessor::processBlock(juce::AudioBuffer<float>& b, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
-
-    const int bandIndex = juce::jlimit(0, 9, static_cast<int>(*apvts.getRawParameterValue("band")));
+    const auto* bandParam = apvts.getRawParameterValue("band");
+    const auto* bypassParam = apvts.getRawParameterValue("bypass");
+    const auto* outputParam = apvts.getRawParameterValue("output");
+    const int bandIndex = juce::jlimit(0, 9, static_cast<int>(bandParam->load()));
     filter.setCentreFrequency(centres[bandIndex]);
-
-    const bool isBypassed = (*apvts.getRawParameterValue("bypass")) > 0.5f;
-    if (!isBypassed)
+    if (! (bypassParam->load() > 0.5f))
     {
         filter.process(b);
-        const float outputDb = *apvts.getRawParameterValue("output");
+        const float outputDb = outputParam->load();
         b.applyGain(juce::Decibels::decibelsToGain(outputDb));
     }
 }
