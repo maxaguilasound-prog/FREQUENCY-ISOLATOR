@@ -1,0 +1,30 @@
+name: Build VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build VST3
+        run: |
+          cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build --config Release --target FrequencyIsolator_VST3
+
+      - name: Package plugin
+        run: |
+          mkdir -p artifact
+          find build -name "Frequency Isolator.vst3" -type d -exec cp -R "{}" artifact/ \;
+          ditto -c -k --sequesterRsrc --keepParent artifact "FrequencyIsolator-VST3-macOS.zip"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrequencyIsolator-VST3-macOS
+          path: FrequencyIsolator-VST3-macOS.zip
