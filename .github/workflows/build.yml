@@ -19,12 +19,14 @@ jobs:
 
       - name: Package plugin
         run: |
+          rm -rf artifact
           mkdir -p artifact
-          find build -name "Frequency Isolator.vst3" -type d -exec cp -R "{}" artifact/ \;
-          ditto -c -k --sequesterRsrc --keepParent artifact "FrequencyIsolator-VST3-macOS.zip"
+          find build -path "*/Release/VST3/Frequency Isolator.vst3" -type d -exec cp -R "{}" artifact/ \;
+          test -d "artifact/Frequency Isolator.vst3"
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
           name: FrequencyIsolator-VST3-macOS
-          path: FrequencyIsolator-VST3-macOS.zip
+          path: artifact/Frequency Isolator.vst3
+          if-no-files-found: error
