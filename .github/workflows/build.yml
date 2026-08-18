@@ -19,14 +19,16 @@ jobs:
 
       - name: Package plugin
         run: |
-          rm -rf artifact
-          mkdir -p artifact
-          find build -path "*/Release/VST3/Frequency Isolator.vst3" -type d -exec cp -R "{}" artifact/ \;
-          test -d "artifact/Frequency Isolator.vst3"
+          rm -rf package FrequencyIsolator-VST3.zip
+          mkdir -p package
+          find build -path "*/Release/VST3/Frequency Isolator.vst3" -type d -exec cp -R "{}" package/ \;
+          test -d "package/Frequency Isolator.vst3"
+          ditto -c -k --keepParent "package/Frequency Isolator.vst3" FrequencyIsolator-VST3.zip
+          unzip -l FrequencyIsolator-VST3.zip
 
-      - name: Upload VST3
+      - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: FrequencyIsolator-VST3-macOS
-          path: artifact/Frequency Isolator.vst3
+          name: FrequencyIsolator-VST3-ZIP
+          path: FrequencyIsolator-VST3.zip
           if-no-files-found: error
