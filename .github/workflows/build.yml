@@ -1,4 +1,4 @@
-name: Build VST3
+name: Build VST3 + AAX
 
 on:
   workflow_dispatch:
@@ -8,27 +8,110 @@ on:
 jobs:
   build:
     runs-on: macos-14
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download AAX SDK
+        run: |
+          curl -L \
+            "https://cdn.avid.com/aax-toolkit/aax-sdk-2-9-0.zip" \
+            -o "$RUNNER_TEMP/aax-sdk.zip"
+
+          mkdir -p "$RUNNER_TEMP/aax-sdk"
+
+          unzip -q "$RUNNER_TEMP/aax-sdk.zip" \
+            -d "$RUNNER_TEMP/aax-sdk"
+
+          echo "=== AAX SDK ==="
+          find "$RUNNER_TEMP/aax-sdk" -maxdepth 3 -type d -print
+
+      - name: Locate AAX SDK
+        run: |
+          SDK_ROOT=$(find "$RUNNER_TEMP/aax-sdk" \
+            -type d \
+            -name "AAX_SDK" \
+            -print -quit)
+
+          if [ -z "$SDK_ROOT" ]; then
+            echo "AAX_SDK directory not found."
+            echo "Searching extracted SDK:"
+            find "$RUNNER_TEMP/aax-sdk" -maxdepth 5 -print
+            exit 1
+          fi
+
+          echo "AAX SDK found:"
+          echo "$SDK_ROOT"
+
+          echo "AAX_SDK_PATH=$SDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Xcode \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DAAX_SDK_PATH="$AAX_SDK_PATH"
+
       - name: Build VST3
         run: |
-          cmake -S . -B build -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
-          cmake --build build --config Release --target FrequencyIsolator_VST3
+          cmake --build build \
+            --config Release \
+            --target FrequencyIsolator_VST3
 
-      - name: Package plugin
+      - name: Build AAX
         run: |
-          rm -rf package FrequencyIsolator-VST3.zip
-          mkdir -p package
-          find build -path "*/Release/VST3/Frequency Isolator.vst3" -type d -exec cp -R "{}" package/ \;
-          test -d "package/Frequency Isolator.vst3"
-          ditto -c -k --keepParent "package/Frequency Isolator.vst3" FrequencyIsolator-VST3.zip
-          unzip -l FrequencyIsolator-VST3.zip
+          cmake --build build \
+            --config Release \
+            --target FrequencyIsolator_AAX
 
-      - name: Upload ZIP
+      - name: Find built plugins
+        run: |
+          echo "=== VST3 ==="
+          find build -type d -name "*.vst3" -print
+
+          echo "=== AAX ==="
+          find build -type d -name "*.aaxplugin" -print
+
+      - name: Package
+        run: |
+          rm -rf package
+          mkdir -p package
+
+          VST3=$(find build \
+            -type d \
+            -name "Frequency Isolator.vst3" \
+            -print -quit)
+
+          AAX=$(find build \
+            -type d \
+            -name "Frequency Isolator.aaxplugin" \
+            -print -quit)
+
+          if [ -z "$VST3" ]; then
+            echo "VST3 was not built."
+            exit 1
+          fi
+
+          if [ -z "$AAX" ]; then
+            echo "AAX was not built."
+            exit 1
+          fi
+
+          cp -R "$VST3" package/
+          cp -R "$AAX" package/
+
+          echo "=== FINAL PACKAGE ==="
+          find package -maxdepth 3 -print
+
+          ditto -c -k \
+            --keepParent \
+            package \
+            FrequencyIsolator-macOS.zip
+
+      - name: Upload plugins
         uses: actions/upload-artifact@v4
         with:
-          name: FrequencyIsolator-VST3-ZIP
-          path: FrequencyIsolator-VST3.zip
+          name: FrequencyIsolator-macOS
+          path: FrequencyIsolator-macOS.zip
           if-no-files-found: error
