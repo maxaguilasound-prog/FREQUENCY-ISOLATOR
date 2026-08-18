@@ -45,7 +45,3 @@ target_link_libraries(FrequencyIsolator PRIVATE
     juce::juce_dsp
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
-
-if(APPLE)
-    set_target_properties(FrequencyIsolator PROPERTIES XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
-endif()
