@@ -26,6 +26,8 @@ juce_add_plugin(FrequencyIsolator
     IS_MIDI_EFFECT FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
+juce_generate_juce_header(FrequencyIsolator)
+
 target_sources(FrequencyIsolator PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
