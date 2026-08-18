@@ -17,13 +17,14 @@ juce_add_plugin(FrequencyIsolator
     BUNDLE_ID com.unbranded.frequencyisolator
     PLUGIN_MANUFACTURER_CODE Unbr
     PLUGIN_CODE FrIs
-    FORMATS VST3
+    FORMATS VST3 AAX
     PRODUCT_NAME "Frequency Isolator"
     VERSION 1.0.0
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
+    AAX_CATEGORY Effect
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
 juce_generate_juce_header(FrequencyIsolator)
