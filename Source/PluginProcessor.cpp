@@ -1,0 +1,12 @@
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+static constexpr float centres[] = {31.5f,63.f,125.f,250.f,500.f,1000.f,2000.f,4000.f,8000.f,16000.f};
+FrequencyIsolatorAudioProcessor::FrequencyIsolatorAudioProcessor() : AudioProcessor(BusesProperties().withInput("Input",juce::AudioChannelSet::stereo(),true).withOutput("Output",juce::AudioChannelSet::stereo(),true)), apvts(*this,nullptr,"PARAMETERS",createParameterLayout()) {}
+juce::AudioProcessorValueTreeState::ParameterLayout FrequencyIsolatorAudioProcessor::createParameterLayout(){std::vector<std::unique_ptr<juce::RangedAudioParameter>> p;p.push_back(std::make_unique<juce::AudioParameterChoice>("band","Band",juce::StringArray{"31.5 Hz","63 Hz","125 Hz","250 Hz","500 Hz","1 kHz","2 kHz","4 kHz","8 kHz","16 kHz"},5));p.push_back(std::make_unique<juce::AudioParameterBool>("bypass","Bypass",false));p.push_back(std::make_unique<juce::AudioParameterFloat>("output","Output",juce::NormalisableRange<float>(-24.f,12.f,.01f),0.f));return {p.begin(),p.end()};}
+void FrequencyIsolatorAudioProcessor::prepareToPlay(double sr,int bs){filter.prepare(sr,bs,getTotalNumOutputChannels());filter.setCentreFrequency(centres[juce::jlimit(0,9,(int)*apvts.getRawParameterValue("band"))]);setLatencySamples(filter.getLatencySamples());}
+void FrequencyIsolatorAudioProcessor::releaseResources(){}
+bool FrequencyIsolatorAudioProcessor::isBusesLayoutSupported(const BusesLayout& l) const{return (l.getMainInputChannelSet()==juce::AudioChannelSet::mono()||l.getMainInputChannelSet()==juce::AudioChannelSet::stereo())&&l.getMainInputChannelSet()==l.getMainOutputChannelSet();}
+void FrequencyIsolatorAudioProcessor::processBlock(juce::AudioBuffer<float>& b,juce::MidiBuffer&){juce::ScopedNoDenormals noDenormals;const int i=juce::jlimit(0,9,(int)*apvts.getRawParameterValue("band"));filter.setCentreFrequency(centres[i]);if(*apvts.getRawParameterValue("bypass")<=.5f){filter.process(b);b.applyGain(juce::Decibels::decibelsToGain(*apvts.getRawParameterValue("output")));}}
+juce::AudioProcessorEditor* FrequencyIsolatorAudioProcessor::createEditor(){return new FrequencyIsolatorAudioProcessorEditor(*this);}
+void FrequencyIsolatorAudioProcessor::getStateInformation(juce::MemoryBlock& d){auto s=apvts.copyState();std::unique_ptr<juce::XmlElement>x(s.createXml());copyXmlToBinary(*x,d);}
+void FrequencyIsolatorAudioProcessor::setStateInformation(const void*d,int n){std::unique_ptr<juce::XmlElement>x(getXmlFromBinary(d,n));if(x&&x->hasTagName(apvts.state.getType()))apvts.replaceState(juce::ValueTree::fromXml(*x));}
